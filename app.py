@@ -7,7 +7,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 # --- CONFIGURATION ---
 logging.basicConfig(level=logging.INFO)
-TOKEN = os.environ.get("8373826607:AAGNafN7e8Q8822w9PfYdeuuPa9ayEHWhaQ")  # Render will set this
+TOKEN = os.environ.get("TELEGRAM_TOKEN")  # Render will set this
 
 # --- FLASK WEB SERVER (Keeps Render happy) ---
 app = Flask(__name__)
