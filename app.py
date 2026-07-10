@@ -9,19 +9,18 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 
-# --- CRITICAL: Read the token from Render ---
+# --- READ TOKEN FROM ENVIRONMENT ---
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
 
 if not TOKEN:
     logging.error("❌ TELEGRAM_TOKEN is NOT SET in environment variables!")
-    logging.error("Please add it in Render's Environment tab.")
 else:
-    logging.info("✅ Token loaded successfully (length: " + str(len(TOKEN)) + " characters)")
+    logging.info("✅ Token loaded successfully.")
 
-# --- FLASK ROUTE (Keeps Render happy) ---
+# --- FLASK ROUTE ---
 @app.route('/')
 def home():
-    return "✅ Academic Bot is running!"
+    return "✅ Bot is running!"
 
 @app.route('/health')
 def health():
@@ -39,7 +38,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = update.effective_user.first_name
     await update.message.reply_text(f"👋 Hi {user_name}! You said: {user_text}")
 
-# --- BOT STARTER FUNCTION ---
+# --- BOT STARTER ---
 def run_telegram_bot():
     if not TOKEN:
         logging.error("❌ Bot cannot start because TOKEN is missing!")
@@ -50,18 +49,16 @@ def run_telegram_bot():
         bot_app = Application.builder().token(TOKEN).build()
         bot_app.add_handler(CommandHandler("start", start))
         bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
-        logging.info("✅ Telegram bot is now polling for messages...")
+        logging.info("✅ Telegram bot is now polling...")
         bot_app.run_polling()
     except Exception as e:
-        logging.error(f"❌ Bot crashed with error: {e}")
+        logging.error(f"❌ Bot crashed: {e}")
 
 # --- MAIN ---
 if __name__ == "__main__":
-    # Start the bot in a background thread
     bot_thread = threading.Thread(target=run_telegram_bot)
     bot_thread.start()
     
-    # Start Flask web server
     port = int(os.environ.get("PORT", 5000))
-    logging.info(f"🚀 Flask server starting on port {port}...")
+    logging.info(f"🚀 Flask running on port {port}...")
     app.run(host="0.0.0.0", port=port)
