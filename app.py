@@ -1,6 +1,6 @@
 import os
 import logging
-import threading
+import asyncio
 from flask import Flask
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
@@ -8,64 +8,38 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 # --- CONFIGURATION ---
 logging.basicConfig(level=logging.INFO)
 
-# --- READ TOKEN FROM ENVIRONMENT ---
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
-
 if not TOKEN:
-    logging.error("❌ TELEGRAM_TOKEN is NOT SET in environment variables!")
-else:
-    logging.info("✅ Token loaded successfully.")
+    logging.error("❌ TOKEN MISSING!")
+    exit(1)
 
-# --- FLASK APP (Runs in a background thread) ---
+# --- FLASK ---
 flask_app = Flask(__name__)
 
 @flask_app.route('/')
 def home():
     return "✅ Bot is running!"
 
-@flask_app.route('/health')
-def health():
-    return "OK"
-
-def run_flask():
-    """Runs Flask in a background thread."""
-    port = int(os.environ.get("PORT", 5000))
-    logging.info(f"🚀 Flask server starting on port {port}...")
-    flask_app.run(host="0.0.0.0", port=port)
-
-# --- TELEGRAM HANDLERS ---
+# --- TELEGRAM ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "📚 **Welcome to your Academic Study Bot!**\n\n"
-        "Send me any text and I will echo it back!"
-    )
+    await update.message.reply_text("📚 Welcome! I am alive and listening!")
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_text = update.message.text
-    user_name = update.effective_user.first_name
-    await update.message.reply_text(f"👋 Hi {user_name}! You said: {user_text}")
-
-# --- MAIN BOT FUNCTION (Runs in main thread) ---
-def run_bot():
-    if not TOKEN:
-        logging.error("❌ Bot cannot start because TOKEN is missing!")
-        return
-    
-    try:
-        logging.info("🤖 Telegram bot is starting...")
-        bot_app = Application.builder().token(TOKEN).build()
-        bot_app.add_handler(CommandHandler("start", start))
-        bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
-        logging.info("✅ Telegram bot is now polling for messages...")
-        bot_app.run_polling()
-    except Exception as e:
-        logging.error(f"❌ Bot crashed: {e}")
+    name = update.effective_user.first_name
+    text = update.message.text
+    await update.message.reply_text(f"👋 Hi {name}! You said: {text}")
 
 # --- MAIN ---
+def main():
+    logging.info("🤖 Starting bot...")
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+    logging.info("✅ Bot is polling...")
+    app.run_polling()
+
 if __name__ == "__main__":
-    # Start Flask in a background thread (safe to run here)
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.start()
-    
-    # Run the Telegram bot in the MAIN thread (critical!)
-    run_bot()
+    # Run Flask in a separate thread
+    import threading
+    threading.Thread(target=lambda: flask_app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))).start()
+    main()
